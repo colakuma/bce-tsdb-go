@@ -12,7 +12,7 @@
 
 ## 安装
 ```shell
-go get github.com\vlorc\bce-tsdb-go
+go get github.com/colakuma/bce-tsdb-go
 ```
 
 ## 许可证
@@ -31,7 +31,7 @@ go get github.com\vlorc\bce-tsdb-go
 1. 创建客户端
 
 ```go
-import "github.com\vlorc\bce-tsdb-go"
+import "github.com/colakuma/bce-tsdb-go"
 
 func main() {
 	// 创建TSDB服务的Client对象

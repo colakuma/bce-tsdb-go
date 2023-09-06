@@ -3,10 +3,11 @@ package tsdb
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+
 	"github.com/baidubce/bce-sdk-go/auth"
 	"github.com/baidubce/bce-sdk-go/bce"
 	"github.com/baidubce/bce-sdk-go/http"
-	"net/url"
 )
 
 const (
@@ -18,10 +19,15 @@ const (
 
 type Client struct {
 	*bce.BceClient
-	host string
+	host     string
+	database string
 }
 
 func NewClient(ak, sk, endpoint string) (*Client, error) {
+	return NewClientWithDB(ak, sk, endpoint, "")
+}
+
+func NewClientWithDB(ak, sk, endpoint, database string) (*Client, error) {
 	var credentials *auth.BceCredentials
 	var err error
 	credentials, err = auth.NewBceCredentials(ak, sk)
@@ -35,27 +41,35 @@ func NewClient(ak, sk, endpoint string) (*Client, error) {
 
 	defaultSignOptions := &auth.SignOptions{
 		HeadersToSign: auth.DEFAULT_HEADERS_TO_SIGN,
-		ExpireSeconds: auth.DEFAULT_EXPIRE_SECONDS}
+		ExpireSeconds: auth.DEFAULT_EXPIRE_SECONDS,
+	}
 	defaultConf := &bce.BceClientConfiguration{
-		Endpoint:    endpoint,
-		Region:      bce.DEFAULT_REGION,
-		UserAgent:   bce.DEFAULT_USER_AGENT,
-		Credentials: credentials,
-		SignOption:  defaultSignOptions,
-		Retry:       bce.DEFAULT_RETRY_POLICY,
-		ConnectionTimeoutInMillis: bce.DEFAULT_CONNECTION_TIMEOUT_IN_MILLIS}
-	return &Client{BceClient: bce.NewBceClient(defaultConf, &auth.BceV1Signer{}), host: u.Host}, nil
+		Endpoint:                  endpoint,
+		Region:                    bce.DEFAULT_REGION,
+		UserAgent:                 bce.DEFAULT_USER_AGENT,
+		Credentials:               credentials,
+		SignOption:                defaultSignOptions,
+		Retry:                     bce.DEFAULT_RETRY_POLICY,
+		ConnectionTimeoutInMillis: bce.DEFAULT_CONNECTION_TIMEOUT_IN_MILLIS,
+	}
+	return &Client{
+		BceClient: bce.NewBceClient(defaultConf, &auth.BceV1Signer{}),
+		host:      u.Host,
+	}, nil
 }
 
 func (c *Client) WriteDatapoint(data []Datapoint) error {
-	return c.__post(URI_DATAPOINT, http.POST, &WriteDataPointArgs{DataPoints: data}, nil)
+	return c.post(URI_DATAPOINT, http.POST, &WriteDataPointArgs{DataPoints: data}, nil)
 }
 
-func (c *Client) __get(uri string, result interface{}, params ...string) (err error) {
+func (c *Client) get(uri string, result interface{}, params ...string) (err error) {
 	req := &bce.BceRequest{}
 	res := &bce.BceResponse{}
 	req.SetMethod(http.GET)
 	req.SetUri(uri)
+	if c.database != "" {
+		req.SetParam("database", c.database)
+	}
 	for i, l := 0, len(params)/2; i < l; i++ {
 		req.SetParam(params[i*2+0], params[i*2+1])
 	}
@@ -70,11 +84,14 @@ func (c *Client) __get(uri string, result interface{}, params ...string) (err er
 	return
 }
 
-func (c *Client) __post(uri, method string, data, result interface{}, params ...string) (err error) {
+func (c *Client) post(uri, method string, data, result interface{}, params ...string) (err error) {
 	req := &bce.BceRequest{}
 	req.SetMethod(method)
 	req.SetUri(uri)
 	req.SetHeader(http.CONTENT_TYPE, bce.DEFAULT_CONTENT_TYPE)
+	if c.database != "" {
+		req.SetParam("database", c.database)
+	}
 	for i, l := 0, len(params)/2; i < l; i++ {
 		req.SetParam(params[i*2+0], params[i*2+1])
 	}
@@ -101,22 +118,22 @@ func (c *Client) __post(uri, method string, data, result interface{}, params ...
 
 func (c *Client) ListMetric() ([]string, error) {
 	list := &ListMetricsResult{}
-	return list.Metrics, c.__get(URI_METRIC, list)
+	return list.Metrics, c.get(URI_METRIC, list)
 }
 
 func (c *Client) ListFieldByMetric(metric string) (map[string]Field, error) {
 	list := &ListFieldResult{}
-	return list.Fields, c.__get(fmt.Sprintf(URI_FIELD, metric), list)
+	return list.Fields, c.get(fmt.Sprintf(URI_FIELD, metric), list)
 }
 
 func (c *Client) ListTagByMetric(metric string) (map[string]TagValues, error) {
 	list := &ListTagsResult{}
-	return list.Tags, c.__get(fmt.Sprintf(URI_TAG, metric), list)
+	return list.Tags, c.get(fmt.Sprintf(URI_TAG, metric), list)
 }
 
 func (c *Client) ListDatapointByQuery(query Queries, disablePresampling ...bool) ([]QueryResult, error) {
 	list := &ListDatapointResult{}
-	return list.Results, c.__post(
+	return list.Results, c.post(
 		URI_DATAPOINT,
 		http.PUT,
 		&ListDatapointArgs{Queries: query, DisablePresampling: len(disablePresampling) > 0 && disablePresampling[0]},
@@ -125,7 +142,7 @@ func (c *Client) ListDatapointByQuery(query Queries, disablePresampling ...bool)
 
 func (c *Client) ListRowBySql(statement string) (*RowResult, error) {
 	list := &RowResult{}
-	err := c.__get(URI_DATAPOINT, list, "sql", statement)
+	err := c.get(URI_DATAPOINT, list, "sql", statement)
 	if nil != err {
 		list = nil
 	}

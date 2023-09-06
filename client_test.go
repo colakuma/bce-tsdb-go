@@ -2,9 +2,12 @@ package tsdb
 
 import "testing"
 
-var __url = "http://xxxxx.tsdb.iot.bj.baidubce.com"
-var __ak = "ssssssssssssssssssssssssssssssss"
-var __sk = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+var (
+	__url     = "http://xxxxx.tsdb.iot.bj.baidubce.com"
+	__ak      = "ssssssssssssssssssssssssssssssss"
+	__sk      = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+	__databse = "developments"
+)
 
 func Test_WriteData(t *testing.T) {
 	cli, err := NewClient(__ak, __sk, __url)
@@ -28,7 +31,7 @@ func Test_WriteData(t *testing.T) {
 }
 
 func Test_ListMetric(t *testing.T) {
-	cli, err := NewClient(__ak, __sk, __url)
+	cli, err := NewClientWithDB(__ak, __sk, __url, __databse)
 	if nil != err {
 		t.Error("NewClient: ", err)
 		return
@@ -106,7 +109,7 @@ func Test_GeneratePresignedUrl(t *testing.T) {
 		Filters: Filter{
 			Start: "12 hour ago",
 		},
-	}},1800)
+	}}, 1800)
 	if nil != err {
 		t.Error("GeneratePresignedUrl: ", err)
 		return
