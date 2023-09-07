@@ -137,8 +137,10 @@ type Column struct {
 	Name string `json:"name"`
 }
 
-type Value []interface{}
-type Raw []interface{}
+type (
+	Value []interface{}
+	Row   []interface{}
+)
 
 func (v Value) Timestamp() int64 {
 	if t, ok := v[0].(int64); ok {
@@ -160,5 +162,5 @@ func (v Value) Tag(i int) interface{} {
 
 type RowResult struct {
 	Columns []Column `json:"columns"`
-	Raw     []Raw    `json:"raw"`
+	Rows    []Row    `json:"rows"`
 }
