@@ -15,6 +15,7 @@ const (
 	URI_TAG       = "/v1/metric/%s/tag"
 	URI_FIELD     = "/v1/metric/%s/field"
 	URI_METRIC    = "/v1/metric"
+	URI_ROW_SQL   = "/v1/row"
 )
 
 type Client struct {
@@ -169,7 +170,7 @@ func (c *Client) ListDatapointByQuery(query Queries, disablePresampling ...bool)
 
 func (c *Client) ListRowBySql(statement string) (*RowResult, error) {
 	list := &RowResult{}
-	err := c.get(URI_DATAPOINT, list, "query", statement)
+	err := c.get(URI_ROW_SQL, list, "sql", statement)
 	if nil != err {
 		list = nil
 	}
