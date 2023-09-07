@@ -23,18 +23,41 @@ type Client struct {
 	database string
 }
 
+type Config struct {
+	Endpoint string
+	AK       string
+	SK       string
+	Database string
+	ProxyUrl string
+}
+
 func NewClient(ak, sk, endpoint string) (*Client, error) {
-	return NewClientWithDB(ak, sk, endpoint, "")
+	c := &Config{
+		Endpoint: endpoint,
+		AK:       ak,
+		SK:       sk,
+	}
+	return NewClientWithConfig(c)
 }
 
 func NewClientWithDB(ak, sk, endpoint, database string) (*Client, error) {
+	c := &Config{
+		Endpoint: endpoint,
+		AK:       ak,
+		SK:       sk,
+		Database: database,
+	}
+	return NewClientWithConfig(c)
+}
+
+func NewClientWithConfig(c *Config) (*Client, error) {
 	var credentials *auth.BceCredentials
 	var err error
-	credentials, err = auth.NewBceCredentials(ak, sk)
+	credentials, err = auth.NewBceCredentials(c.AK, c.SK)
 	if err != nil {
 		return nil, err
 	}
-	u, err := url.Parse(endpoint)
+	u, err := url.Parse(c.Endpoint)
 	if nil != err {
 		return nil, err
 	}
@@ -44,7 +67,7 @@ func NewClientWithDB(ak, sk, endpoint, database string) (*Client, error) {
 		ExpireSeconds: auth.DEFAULT_EXPIRE_SECONDS,
 	}
 	defaultConf := &bce.BceClientConfiguration{
-		Endpoint:                  endpoint,
+		Endpoint:                  c.Endpoint,
 		Region:                    bce.DEFAULT_REGION,
 		UserAgent:                 bce.DEFAULT_USER_AGENT,
 		Credentials:               credentials,
@@ -52,9 +75,13 @@ func NewClientWithDB(ak, sk, endpoint, database string) (*Client, error) {
 		Retry:                     bce.DEFAULT_RETRY_POLICY,
 		ConnectionTimeoutInMillis: bce.DEFAULT_CONNECTION_TIMEOUT_IN_MILLIS,
 	}
+	if c.ProxyUrl != "" {
+		defaultConf.ProxyUrl = c.ProxyUrl
+	}
 	return &Client{
 		BceClient: bce.NewBceClient(defaultConf, &auth.BceV1Signer{}),
 		host:      u.Host,
+		database:  c.Database,
 	}, nil
 }
 
