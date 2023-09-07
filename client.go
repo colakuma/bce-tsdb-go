@@ -169,7 +169,7 @@ func (c *Client) ListDatapointByQuery(query Queries, disablePresampling ...bool)
 
 func (c *Client) ListRowBySql(statement string) (*RowResult, error) {
 	list := &RowResult{}
-	err := c.get(URI_DATAPOINT, list, "sql", statement)
+	err := c.get(URI_DATAPOINT, list, "query", statement)
 	if nil != err {
 		list = nil
 	}
